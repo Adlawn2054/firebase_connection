@@ -42,6 +42,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
       setState(() {
         _isLoading = false;
       });
+      Future.delayed(Duration.zero, () {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(res)));
+      });
     }
   }
 
