@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:flutter/services.dart';
 import 'package:firebase_connection/views/screen/authentication%20screen/register_screen.dart';
 import 'package:firebase_connection/views/screen/main_screen.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -30,6 +31,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    SystemChrome.setSystemUIOverlayStyle(
+      const SystemUiOverlayStyle(statusBarColor: Colors.transparent),
+    );
     return MaterialApp(
       title: 'Connection To Firebase',
       debugShowCheckedModeBanner: false,

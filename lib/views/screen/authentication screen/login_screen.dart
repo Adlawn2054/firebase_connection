@@ -126,16 +126,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   onChanged: (value) {
                     password = value;
                   },
-                  obscureText: true,
+                  obscureText: !_isPasswordVisible,
                   decoration: InputDecoration(
                     prefixIcon: const Icon(
                       Icons.lock_outline,
                       color: Colors.blue,
                     ),
-                    suffixIcon: const Icon(
-                      Icons.visibility,
-                      color: Colors.grey,
-                    ),
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
+                        color:Colors.grey,
+                      ),
+                        onPressed: (){
+                          setState(() {
+                            _isPasswordVisible = !_isPasswordVisible;
+                          });
+                        },
+                      ),
                     hintText: "Enter your password",
                     labelText: "Password",
                     filled: true,
