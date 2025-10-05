@@ -47,4 +47,19 @@ class AuthController {
     }
     return result;
   }
+  
+ Stream<QuerySnapshot> getAllSingers() {
+    return _firestore.collection('singers').snapshots();
+  }
+
+  //update singer
+  Future<void> updateSinger(String uid, Map<String, dynamic> data) async {
+    await _firestore.collection('singers').doc(uid).update(data);
+  }
+
+  //delete singer
+  Future<void> deleteSinger(String uid) async {
+    await _firestore.collection('singers').doc(uid).delete();
+  }
 }
+

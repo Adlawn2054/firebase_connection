@@ -204,9 +204,27 @@ class _LoginScreenState extends State<LoginScreen> {
                       onTap: () {
                         Navigator.push(
                           context,
-                          MaterialPageRoute(
-                            builder: (context) => RegisterScreen(),
-                          ),
+                          PageRouteBuilder(
+                            transitionDuration: Duration(milliseconds: 500),
+                            pageBuilder: (context, animation, secondaryAnimation) =>
+                              RegisterScreen(),
+                              transitionsBuilder: (context, animation, secondaryAnimation, child){
+                      const begin = Offset(1.0, 0.0); // slide from right to left
+                                    const end = Offset.zero;
+                                    const curve = Curves.easeInOut;
+
+                                    var tween = Tween(begin: begin, end: end)
+                                        .chain(CurveTween(curve: curve));
+
+                                    return SlideTransition(
+                                      position: animation.drive(tween),
+                                      child: child,
+                                    );
+                              }
+                          )
+                          // MaterialPageRoute(
+                          //   builder: (context) => RegisterScreen(),
+                          // ),
                         );
                       },
                       child: const Text(
