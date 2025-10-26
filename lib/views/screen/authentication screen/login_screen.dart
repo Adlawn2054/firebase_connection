@@ -20,35 +20,30 @@ class _LoginScreenState extends State<LoginScreen> {
   late String password;
 
   loginUser() async {
-    _isLoading = false;
-
-    String result = await _authController.loginUser(email, password);
-    if (result == 'success') {
-      // go to main screen
-
-      Future.delayed(Duration.zero, () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) {
-              return MainScreen();
-            },
-          ),
-        );
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text("You are now Logged In")));
-      });
-      print('Log In');
-    } else {
-      setState(() {
-        _isLoading = false;
-      });
-      Future.delayed(Duration.zero, () {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(result)));
-      });
+    setState(() => _isLoading = true); // Start loading
+    try {
+      String result = await _authController.loginUser(email, password);
+      if (result == 'success') {
+        // go to main screen
+        Future.delayed(Duration.zero, () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) {
+                return MainScreen();
+              },
+            ),
+          );
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("You are now Logged In")));
+        });
+        print('Log In');
+      } else {
+        Future.delayed(Duration.zero, () {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
+        });
+      }
+    } finally {
+      setState(() => _isLoading = false); // Always stop loading
     }
   }
 
@@ -135,14 +130,14 @@ class _LoginScreenState extends State<LoginScreen> {
                     suffixIcon: IconButton(
                       icon: Icon(
                         _isPasswordVisible ? Icons.visibility : Icons.visibility_off,
-                        color:Colors.grey,
+                        color: Colors.grey,
                       ),
-                        onPressed: (){
-                          setState(() {
-                            _isPasswordVisible = !_isPasswordVisible;
-                          });
-                        },
-                      ),
+                      onPressed: () {
+                        setState(() {
+                          _isPasswordVisible = !_isPasswordVisible;
+                        });
+                      },
+                    ),
                     hintText: "Enter your password",
                     labelText: "Password",
                     filled: true,
@@ -157,30 +152,26 @@ class _LoginScreenState extends State<LoginScreen> {
                 const SizedBox(height: 30),
 
                 // Sign In Button
-                _isLoading
-                    ? Center(
-                        child: CircularProgressIndicator(color: Colors.blue),
-                      )
-                    : InkWell(
-                        onTap: () {
-                          if (_formkey.currentState!.validate()) {
-                            //   print(email);
-                            //   print(password);
-                            loginUser();
-                          } else {
-                            print('failed');
-                          }
-                        },
-                        child: SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: Container(
-                            decoration: BoxDecoration(
-                              color: const Color.fromARGB(255, 65, 149, 218),
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: Center(
-                              child: const Text(
+                InkWell(
+                  onTap: () {
+                    if (!_isLoading && _formkey.currentState!.validate()) {
+                      loginUser();
+                    } else {
+                      print('failed');
+                    }
+                  },
+                  child: SizedBox(
+                    width: double.infinity,
+                    height: 50,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: const Color.fromARGB(255, 65, 149, 218),
+                        borderRadius: BorderRadius.circular(10),
+                      ),
+                      child: Center(
+                        child: _isLoading
+                            ? const CircularProgressIndicator(color: Colors.white) // Spinner inside the button
+                            : const Text(
                                 "Sign in",
                                 style: TextStyle(
                                   fontSize: 16,
@@ -188,10 +179,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: Colors.white,
                                 ),
                               ),
-                            ),
-                          ),
-                        ),
                       ),
+                    ),
+                  ),
+                ),
 
                 const SizedBox(height: 20),
 
@@ -206,25 +197,20 @@ class _LoginScreenState extends State<LoginScreen> {
                           context,
                           PageRouteBuilder(
                             transitionDuration: Duration(milliseconds: 500),
-                            pageBuilder: (context, animation, secondaryAnimation) =>
-                              RegisterScreen(),
-                              transitionsBuilder: (context, animation, secondaryAnimation, child){
-                      const begin = Offset(1.0, 0.0); // slide from right to left
-                                    const end = Offset.zero;
-                                    const curve = Curves.easeInOut;
+                            pageBuilder: (context, animation, secondaryAnimation) => RegisterScreen(),
+                            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+                              const begin = Offset(1.0, 0.0); // slide from right to left
+                              const end = Offset.zero;
+                              const curve = Curves.easeInOut;
 
-                                    var tween = Tween(begin: begin, end: end)
-                                        .chain(CurveTween(curve: curve));
+                              var tween = Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
 
-                                    return SlideTransition(
-                                      position: animation.drive(tween),
-                                      child: child,
-                                    );
-                              }
-                          )
-                          // MaterialPageRoute(
-                          //   builder: (context) => RegisterScreen(),
-                          // ),
+                              return SlideTransition(
+                                position: animation.drive(tween),
+                                child: child,
+                              );
+                            },
+                          ),
                         );
                       },
                       child: const Text(

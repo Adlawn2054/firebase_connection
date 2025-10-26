@@ -15,13 +15,16 @@ class AuthController {
       UserCredential userCredential = await _auth
           .createUserWithEmailAndPassword(email: email, password: password);
 
+      // Save a user document with clearer, strongly-typed fields.
       await _firestore.collection('singers').doc(userCredential.user!.uid).set({
-        'name': name,
-        'profileImage': "",
+        'displayName': name,
+        'photoUrl': '',
         'uid': userCredential.user!.uid,
-        'pinCode': "",
-        'purok': '',
+        // store favorites and songs as arrays so they are easy to query/update
+        'favoriteSongs': <String>[],
+        'songs': <String>[],
         'city': '',
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
       result = 'success';
