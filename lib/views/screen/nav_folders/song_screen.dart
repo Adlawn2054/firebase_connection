@@ -1,191 +1,160 @@
 import 'package:flutter/material.dart';
-import '../../../firebase_code/firestore.dart';
 
-/// A live-updating screen that reads songs from Firestore and
-/// allows toggling favorites and deleting songs.
-class SongScreen extends StatefulWidget {
-  const SongScreen({Key? key}) : super(key: key);
+class MusicScreen extends StatefulWidget {
+  const MusicScreen({super.key});
 
   @override
-  State<SongScreen> createState() => _SongScreenState();
+  State<MusicScreen> createState() => _MusicScreenState();
 }
 
-class _SongScreenState extends State<SongScreen> {
-  final FirestoreService _service = FirestoreService();
+class _MusicScreenState extends State<MusicScreen> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = '';
 
-  Future<void> _onDelete(String title) async {
-    try {
-      await _service.deleteSongByTitle(title);
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Deleted')));
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Delete failed: $e')));
-    }
+  // Static song data matching the image
+  final List<Map<String, String>> _songs = const [
+    {'title': 'Ikot Ikot lang', 'artist': 'Sarah Geronimo'},
+    {'title': 'Lord Patawad', 'artist': 'Michael Estal'},
+    {'title': 'Kulang Pa Ba', 'artist': 'Regine Velasquez'},
+    {'title': 'Pare', 'artist': 'Gilbert Quevedo'},
+  ];
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
-  Future<void> _onToggleFavorite(String title) async {
-    try {
-      await _service.toggleFavoriteByTitle(title);
-    } catch (e) {
-      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update failed: $e')));
+  List<Map<String, String>> _filterSongs(List<Map<String, String>> songs, String query) {
+    if (query.isEmpty) {
+      return songs;
     }
+
+    final lowerQuery = query.toLowerCase();
+    return songs.where((song) {
+      final title = song['title']!.toLowerCase();
+      final artist = song['artist']!.toLowerCase();
+      return title.contains(lowerQuery) || artist.contains(lowerQuery);
+    }).toList();
   }
 
   @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Music'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(text: 'Songs', icon: Icon(Icons.music_note)),
-              Tab(text: 'Users', icon: Icon(Icons.person)),
-            ],
+    final filteredSongs = _filterSongs(_songs, _searchQuery);
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () {},
+        ),
+        title: TextField(
+          controller: _searchController,
+          style: const TextStyle(color: Colors.black),
+          decoration: const InputDecoration(
+            hintText: 'Search songs...',
+            hintStyle: TextStyle(color: Colors.grey),
+            border: InputBorder.none,
+            enabledBorder: InputBorder.none,
+            focusedBorder: InputBorder.none,
           ),
+          onChanged: (value) {
+            setState(() {
+              _searchQuery = value;
+            });
+          },
         ),
-        body: TabBarView(
-          children: [
-            // Songs tab (existing)
-            StreamBuilder<List<Song>>(
-              stream: _service.songsStream(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final songs = snapshot.data ?? <Song>[];
-
-                if (songs.isEmpty) {
-                  return const Center(child: Text('No songs yet'));
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: songs.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final song = songs[index];
-                    final isFavorite = song.isFavorite;
-                    return Card(
-                      child: ListTile(
-                        leading: const Icon(Icons.music_note, color: Colors.blue),
-                        title: Text(song.title),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: Icon(
-                                isFavorite ? Icons.favorite : Icons.favorite_border,
-                                color: isFavorite ? Colors.red : Colors.grey,
-                              ),
-                              onPressed: () => _onToggleFavorite(song.title),
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.grey),
-                              onPressed: () => _onDelete(song.title),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
+        actions: [
+          if (_searchQuery.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.black),
+              onPressed: () {
+                setState(() {
+                  _searchQuery = '';
+                  _searchController.clear();
+                });
               },
             ),
-
-            // Users tab
-            StreamBuilder<List<Singer>>(
-              stream: _service.singersStream(),
-              builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                final users = snapshot.data ?? <Singer>[];
-
-                if (users.isEmpty) {
-                  return const Center(child: Text('No users found'));
-                }                                                                                                             
-
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: users.length,
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final user = users[index];
-                    return Card(
-                      child: ListTile(
-                        // show avatar or initial
-                        leading: user.photoUrl.isNotEmpty
-                            ? CircleAvatar(backgroundImage: NetworkImage(user.photoUrl))
-                            : CircleAvatar(child: Text(user.displayName.isNotEmpty ? user.displayName[0] : '?')),
-                        // display only the name
-                        title: Text(user.displayName.isNotEmpty ? user.displayName : '(no name)'),
-                        // edit and delete buttons
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              icon: const Icon(Icons.edit, color: Colors.blueAccent),
-                              onPressed: () async {
-                                final controller = TextEditingController(text: user.displayName);
-                                final newName = await showDialog<String>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Edit name'),
-                                    content: TextField(
-                                      controller: controller,
-                                      decoration: const InputDecoration(labelText: 'Name'),
-                                      autofocus: true,
-                                    ),
-                                    actions: [
-                                      TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-                                      TextButton(onPressed: () => Navigator.pop(context, controller.text.trim()), child: const Text('Save')),
-                                    ],
-                                  ),
-                                );
-
-                                if (newName != null && newName.isNotEmpty && newName != user.displayName) {
-                                  try {
-                                    await _service.updateSingerName(user.id, newName);
-                                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Name updated')));
-                                  } catch (e) {
-                                    if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Update failed: $e')));
-                                  }
-                                }
-                              },
-                            ),
-                            IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.redAccent),
-                              onPressed: () async {
-                                final confirm = await showDialog<bool>(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: const Text('Delete user'),
-                                    content: const Text('Are you sure you want to delete this user? This cannot be undone.'),
-                                    actions: [
-                                      TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-                                      TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete', style: TextStyle(color: Colors.red))),
-                                    ],
-                                  ),
-                                );
-                                if (confirm == true) {
-                                  await _service.deleteSingerById(user.id);
-                                  if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('User deleted')));
-                                }
-                              },
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                );
+        ],
+      ),
+      body: filteredSongs.isEmpty && _searchQuery.isNotEmpty
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.search_off, size: 64, color: Colors.grey),
+                  const SizedBox(height: 16),
+                  Text(
+                    'No songs found matching "$_searchQuery"',
+                    style: const TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                ],
+              ),
+            )
+          : ListView.builder(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              itemCount: filteredSongs.length,
+              itemBuilder: (context, index) {
+                return _buildSongItem(filteredSongs[index]);
               },
             ),
-          ],
+    );
+  }
+
+  Widget _buildSongItem(Map<String, String> song) {
+    return ListTile(
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      leading: Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(
+          color: Colors.blue.shade100,
+          borderRadius: BorderRadius.circular(8),
         ),
+        child: Icon(
+          Icons.music_note,
+          color: Colors.blue.shade700,
+          size: 24,
+        ),
+      ),
+      title: Text(
+        song['title']!,
+        style: const TextStyle(
+          fontSize: 16,
+          fontWeight: FontWeight.w600,
+          color: Colors.black87,
+        ),
+      ),
+      subtitle: Text(
+        'by ${song['artist']!}',
+        style: TextStyle(
+          fontSize: 14,
+          color: Colors.grey.shade600,
+        ),
+      ),
+      trailing: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Favorite Icon
+          IconButton(
+            icon: const Icon(
+              Icons.favorite_border,
+              color: Colors.grey,
+            ),
+            onPressed: () {},
+          ),
+          // Delete Icon
+          IconButton(
+            icon: const Icon(
+              Icons.delete,
+              color: Colors.red,
+            ),
+            onPressed: () {},
+          ),
+        ],
       ),
     );
   }

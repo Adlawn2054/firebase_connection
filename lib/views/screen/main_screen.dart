@@ -1,7 +1,8 @@
+import 'package:firebase_connection/views/screen/nav_folders/account_screen.dart';
+import 'package:firebase_connection/views/screen/nav_folders/song_screen.dart';
 import 'package:flutter/material.dart';
 
 import 'package:firebase_connection/views/screen/nav_folders/home_screen.dart';
-import 'package:firebase_connection/views/screen/nav_folders/song_screen.dart';
 import 'package:firebase_connection/views/screen/nav_folders/favorite_screen.dart';
 import 'package:firebase_connection/firebase_code/firestore.dart';
 
@@ -48,9 +49,9 @@ class _MainScreenState extends State<MainScreen> {
       final List<Widget> _pages = [
       HomeScreen(),
       // SongScreen is now self-contained and reads from Firestore directly.
-      SongScreen(),
-      FavoriteScreen(favoriteSongs: favoriteSongs),
-      Center(child: Text("User Page")),
+      MusicScreen(),
+      FavoriteScreen(),
+      UserAccountScreent()
     ];
     return Scaffold(
       body: _pages[_pageIndex],

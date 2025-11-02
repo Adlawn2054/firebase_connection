@@ -5,21 +5,45 @@ class Song {
 	final String id;
 	final String title;
 	final bool isFavorite;
+	final String? artist;
 
-	Song({required this.id, required this.title, required this.isFavorite});
+	Song({required this.id, required this.title, required this.isFavorite, this.artist});
 
 	factory Song.fromDoc(DocumentSnapshot doc) {
 		final data = doc.data() as Map<String, dynamic>? ?? <String, dynamic>{};
+		final title = (data['title'] ?? '') as String;
+		
+		// Parse artist from title if it contains "by"
+		String? artistName;
+		if (title.toLowerCase().contains(' by ')) {
+			final parts = title.split(' by ');
+			if (parts.length >= 2) {
+				artistName = parts.sublist(1).join(' by ').trim();
+			}
+		} else if (data['artist'] != null) {
+			artistName = data['artist']?.toString();
+		}
+		
 		return Song(
 			id: doc.id,
-			title: (data['title'] ?? '') as String,
+			title: title,
 			isFavorite: (data['isFavorite'] ?? false) as bool,
+			artist: artistName,
 		);
+	}
+
+	// Get clean title without artist
+	String get cleanTitle {
+		if (title.toLowerCase().contains(' by ')) {
+			return title.split(' by ')[0].trim();
+		}
+		return title;
 	}
 
 	Map<String, dynamic> toJson() => {
 				'title': title,
 				'isFavorite': isFavorite,
+				if (artist != null) 'artist': artist,
 			};
 }
 
@@ -53,6 +77,15 @@ class FirestoreService {
 				.map((snap) => snap.docs.map((d) => (d.data()['title'] ?? '') as String).toList(growable: false));
 	}
 
+	/// Stream of favorite songs as `Song` objects.
+	Stream<List<Song>> favoriteSongsStream() {
+		return _db
+				.collection('songs')
+				.where('isFavorite', isEqualTo: true)
+				.snapshots()
+				.map((snap) => snap.docs.map((doc) => Song.fromDoc(doc)).toList(growable: false));
+	}
+
 	/// Add a new song. If you want to use the title as document id, change this to `.doc(title).set(...)`.
 	Future<void> addSong(String title) async {
 		await _db.collection('songs').add({'title': title, 'isFavorite': false});
@@ -73,6 +106,21 @@ class FirestoreService {
 		final query = await _db.collection('songs').where('title', isEqualTo: title).get();
 		for (final doc in query.docs) {
 			final data = doc.data();
+			final current = (data['isFavorite'] ?? false) as bool;
+			await doc.reference.update({'isFavorite': !current});
+		}
+	}
+
+	/// Delete song by document ID.
+	Future<void> deleteSongById(String id) async {
+		await _db.collection('songs').doc(id).delete();
+	}
+
+	/// Toggle the `isFavorite` field for a song by document ID.
+	Future<void> toggleFavoriteById(String id) async {
+		final doc = await _db.collection('songs').doc(id).get();
+		if (doc.exists) {
+			final data = doc.data()!;
 			final current = (data['isFavorite'] ?? false) as bool;
 			await doc.reference.update({'isFavorite': !current});
 		}

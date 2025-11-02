@@ -1,41 +1,20 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 
-class EditUserScreen extends StatefulWidget {
-  final String uid;
-  final Map<String, dynamic> data;
-
-  const EditUserScreen({super.key, required this.uid, required this.data});
+class AddUserScreen extends StatefulWidget {
+  const AddUserScreen({super.key});
 
   @override
-  State<EditUserScreen> createState() => _EditUserScreenState();
+  State<AddUserScreen> createState() => _AddUserScreenState();
 }
 
-class _EditUserScreenState extends State<EditUserScreen> {
+class _AddUserScreenState extends State<AddUserScreen> {
   final _formKey = GlobalKey<FormState>();
-  late TextEditingController _nameController;
-  late TextEditingController _cityController;
-  late TextEditingController _pinCodeController;
-  late TextEditingController _purokController;
+  final _nameController = TextEditingController();
+  final _cityController = TextEditingController();
+  final _pinCodeController = TextEditingController();
+  final _purokController = TextEditingController();
   bool _isLoading = false;
-
-  @override
-  void initState() {
-    super.initState();
-    // Pre-fill controllers with existing data
-    _nameController = TextEditingController(
-      text: widget.data['name']?.toString() ?? widget.data['displayName']?.toString() ?? '',
-    );
-    _cityController = TextEditingController(
-      text: widget.data['city']?.toString() ?? '',
-    );
-    _pinCodeController = TextEditingController(
-      text: widget.data['pinCode']?.toString() ?? widget.data['pincode']?.toString() ?? '',
-    );
-    _purokController = TextEditingController(
-      text: widget.data['purok']?.toString() ?? '',
-    );
-  }
 
   @override
   void dispose() {
@@ -46,32 +25,34 @@ class _EditUserScreenState extends State<EditUserScreen> {
     super.dispose();
   }
 
-  Future<void> _updateUser() async {
+  Future<void> _addUser() async {
     if (_formKey.currentState!.validate()) {
       setState(() => _isLoading = true);
 
       try {
-        await FirebaseFirestore.instance
-            .collection('singers')
-            .doc(widget.uid)
-            .update({
+        // Create a new document with auto-generated ID
+        final docRef = FirebaseFirestore.instance.collection('singers').doc();
+        
+        await docRef.set({
           'name': _nameController.text.trim(),
-          'displayName': _nameController.text.trim(), // Update both for compatibility
           'city': _cityController.text.trim(),
           'pinCode': _pinCodeController.text.trim(),
           'purok': _purokController.text.trim(),
+          'uid': docRef.id,
+          'profileImage': '',
+          'createdAt': FieldValue.serverTimestamp(),
         });
 
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('User updated successfully')),
+            const SnackBar(content: Text('User added successfully')),
           );
           Navigator.pop(context);
         }
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error updating user: $e')),
+            SnackBar(content: Text('Error adding user: $e')),
           );
         }
       } finally {
@@ -86,7 +67,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Edit User'),
+        title: const Text('Add User'),
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -174,9 +155,9 @@ class _EditUserScreenState extends State<EditUserScreen> {
               ),
               const SizedBox(height: 32),
               
-              // Update Button
+              // Submit Button
               ElevatedButton(
-                onPressed: _isLoading ? null : _updateUser,
+                onPressed: _isLoading ? null : _addUser,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
@@ -190,7 +171,7 @@ class _EditUserScreenState extends State<EditUserScreen> {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       )
                     : const Text(
-                        'Update User',
+                        'Add User',
                         style: TextStyle(fontSize: 16),
                       ),
               ),
@@ -201,3 +182,4 @@ class _EditUserScreenState extends State<EditUserScreen> {
     );
   }
 }
+
